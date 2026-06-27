@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>기로드 Short Scout</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap');
+  :root {
+    --bg:#ffffff; --bg2:#f5f5f7; --bg3:#ebebef; --border:#e0e0e8;
+    --text:#1a1a2e; --text2:#6b6b8a;
+    --green:#16a34a; --green-bg:#f0fdf4; --green-border:#86efac;
+    --red:#dc2626; --red-bg:#fff1f1; --red-border:#fca5a5;
+    --yellow:#d97706; --yellow-bg:#fffbeb; --yellow-border:#fcd34d;
+    --accent:#4f46e5;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Noto Sans KR',sans-serif;background:#f0f0f5;color:var(--text);min-height:100vh;padding:24px 16px;}
+  .container{max-width:760px;margin:0 auto;}
+
+  .header{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+  .logo{font-size:22px;font-weight:700;color:var(--text);}
+  .logo span{color:var(--accent);}
+  .subtitle{font-size:12px;color:var(--text2);background:var(--bg2);padding:3px 10px;border-radius:99px;border:1px solid var(--border);}
+
+  .paste-area{
+    background:var(--bg);border:2px dashed var(--border);border-radius:16px;
+    padding:32px 20px;text-align:center;cursor:pointer;transition:all 0.2s;
+    margin-bottom:16px;position:relative;outline:none;
+  }
+  .paste-area:focus,.paste-area.active{border-color:var(--accent);background:#f8f7ff;box-shadow:0 0 0 3px rgba(79,70,229,0.08);}
+  .paste-area.has-image{padding:0;border-style:solid;border-color:var(--border);}
+  .paste-icon{font-size:36px;margin-bottom:10px;}
+  .paste-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px;}
+  .paste-sub{font-size:13px;color:var(--text2);}
+  .paste-hint{display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:8px 16px;background:var(--bg2);border-radius:8px;border:1px solid var(--border);font-size:13px;color:var(--text2);}
+  .key{background:var(--bg3);padding:2px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--text);}
+
+  .preview-img{width:100%;max-height:280px;object-fit:contain;border-radius:14px;display:block;}
+  .preview-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg2);border-top:1px solid var(--border);border-radius:0 0 14px 14px;}
+  .preview-name{font-size:13px;color:var(--text2);}
+  .btn-clear{background:none;border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;color:var(--text2);font-family:'Noto Sans KR',sans-serif;}
+  .btn-clear:hover{background:var(--red-bg);border-color:var(--red-border);color:var(--red);}
+
+  .analyze-btn{
+    width:100%;height:50px;font-size:16px;font-weight:700;
+    background:var(--accent);color:white;border:none;border-radius:12px;
+    cursor:pointer;font-family:'Noto Sans KR',sans-serif;
+    display:none;margin-bottom:20px;transition:opacity 0.2s;
+    box-shadow:0 4px 12px rgba(79,70,229,0.25);
+  }
+  .analyze-btn:hover{opacity:0.9;}
+  .analyze-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+  .loading{display:none;text-align:center;padding:32px;color:var(--text2);font-size:14px;}
+  .spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px;}
+
+  .error-box{display:none;padding:14px 16px;border-radius:12px;background:var(--red-bg);color:var(--red);font-size:14px;border:1px solid var(--red-border);margin-bottom:16px;}
+
+  .result{display:none;}
+
+  .ticker-display{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .ticker-sym{font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:700;color:var(--text);}
+  .ticker-fullname{font-size:15px;color:var(--text2);}
+  .ticker-price{font-size:15px;font-weight:700;color:var(--accent);}
+  .ticker-type{font-size:11px;color:var(--text2);background:var(--bg2);padding:3px 10px;border-radius:99px;border:1px solid var(--border);}
+
+  .verdict{border-radius:16px;padding:18px 20px;margin-bottom:16px;border:1.5px solid;}
+  .verdict-text{font-size:24px;font-weight:700;}
+  .verdict-sub{font-size:14px;margin-top:5px;}
+  .verdict-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+  .badge-fail{font-size:12px;padding:4px 12px;border-radius:99px;background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);font-weight:600;}
+  .badge-warn{font-size:12px;padding:4px 12px;border-radius:99px;background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-border);font-weight:600;}
+
+  .section-label{font-size:11px;color:var(--text2);font-weight:700;letter-spacing:0.8px;margin-bottom:8px;text-transform:uppercase;}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}
+  .cards-extra{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;}
+  .card{border-radius:12px;padding:14px;border:1px solid var(--border);background:var(--bg);}
+  .card-label{font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:500;}
+  .card-value{font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--text);}
+  .card-std{font-size:11px;margin-top:5px;color:var(--text2);}
+  .card.pass{background:var(--green-bg);border-color:var(--green-border);}
+  .card.pass .card-value{color:var(--green);}
+  .card.pass .card-std{color:var(--green);}
+  .card.fail{background:var(--red-bg);border-color:var(--red-border);}
+  .card.fail .card-value{color:var(--red);}
+  .card.fail .card-std{color:var(--red);}
+  .card.warn{background:var(--yellow-bg);border-color:var(--yellow-border);}
+  .card.warn .card-value{color:var(--yellow);}
+  .card.warn .card-std{color:var(--yellow);}
+
+  .table-wrap{border-radius:14px;border:1px solid var(--border);overflow:hidden;margin-bottom:20px;background:var(--bg);}
+  .table-title{padding:10px 16px;background:var(--bg2);font-size:12px;font-weight:700;color:var(--text2);border-bottom:1px solid var(--border);letter-spacing:0.5px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;}
+  th{padding:9px 14px;text-align:left;font-weight:600;color:var(--text2);background:var(--bg2);border-bottom:1px solid var(--border);font-size:12px;}
+  th:nth-child(3),td:nth-child(3){text-align:right;}
+  th:nth-child(4),td:nth-child(4){text-align:center;}
+  td{padding:11px 14px;color:var(--text);border-bottom:1px solid var(--border);}
+  tr:last-child td{border-bottom:none;}
+  tr.divider td{border-top:2px dashed var(--border);}
+  td.pass-cell{color:var(--green);font-weight:700;}
+  td.fail-cell{color:var(--red);font-weight:700;}
+  td.ref-cell{color:var(--text2);}
+  .table-footer{padding:8px 14px;font-size:11px;color:var(--text2);text-align:right;border-top:1px solid var(--border);background:var(--bg2);}
+
+  .legend{padding:12px 16px;border-radius:12px;background:var(--bg);border:1px solid var(--border);font-size:13px;color:var(--text2);line-height:2;}
+
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media(max-width:580px){.cards{grid-template-columns:repeat(2,1fr);}.ticker-sym{font-size:24px;}}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="logo">🛡️ <span>기로드</span> Short Scout</div>
+    <div class="subtitle">OKX 선물 매매 안전 필터</div>
+  </div>
+
+  <div class="paste-area" id="paste-area" tabindex="0">
+    <div id="paste-placeholder">
+      <div class="paste-icon">📋</div>
+      <div class="paste-title">스크린샷을 여기에 붙여넣기</div>
+      <div class="paste-sub">OKX Info 탭을 캡처한 후 붙여넣으세요</div>
+      <div class="paste-hint">
+        <span>캡처 후</span>
+        <span class="key">Ctrl</span><span>+</span><span class="key">V</span>
+        <span>또는 클릭 후</span>
+        <span class="key">Ctrl</span><span>+</span><span class="key">V</span>
+      </div>
+    </div>
+    <div id="paste-preview" style="display:none;">
+      <img id="preview-img" class="preview-img" src="" alt="screenshot">
+      <div class="preview-bar">
+        <span class="preview-name">📸 스크린샷 로드됨</span>
+        <button class="btn-clear" onclick="clearImage(event)">✕ 다시 붙여넣기</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="analyze-btn" id="analyze-btn" onclick="analyzeImage()">🔍 분석 시작</button>
+
+  <div class="loading" id="loading-area">
+    <div class="spinner"></div>
+    <span id="loading-msg">AI가 스크린샷 분석 중...</span>
+  </div>
+
+  <div class="error-box" id="error-area"></div>
+
+  <div class="result" id="result-area">
+    <div class="ticker-display">
+      <span class="ticker-sym" id="ticker-sym"></span>
+      <span class="ticker-fullname" id="ticker-fullname"></span>
+      <span class="ticker-price" id="ticker-price"></span>
+      <span class="ticker-type">USDT 선물</span>
+    </div>
+    <div class="verdict" id="verdict-box">
+      <div class="verdict-text" id="verdict-text"></div>
+      <div class="verdict-sub" id="verdict-sub"></div>
+      <div class="verdict-badges" id="verdict-badges"></div>
+    </div>
+    <div class="section-label">📋 기본 필터 — 2개↑ 부적합 시 매매 금지</div>
+    <div class="cards" id="cards-base"></div>
+    <div class="section-label">📊 추가 지표</div>
+    <div class="cards-extra" id="cards-extra"></div>
+    <div class="table-wrap">
+      <div class="table-title">전체 항목 상세</div>
+      <table>
+        <colgroup><col style="width:20%"><col style="width:27%"><col style="width:35%"><col style="width:18%"></colgroup>
+        <thead><tr><th>항목</th><th>기준</th><th>실제값</th><th>결과</th></tr></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+      <div class="table-footer" id="table-footer"></div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span style="color:var(--red);font-weight:700;">🔴 매매 금지</span> — 기본필터 ❌ 2개 이상 &nbsp;|&nbsp;
+    <span style="color:var(--yellow);font-weight:700;">🟡 주의</span> — ❌ 1개 &nbsp;|&nbsp;
+    <span style="color:var(--green);font-weight:700;">🟢 매매 가능</span> — 전항목 통과
+  </div>
+</div>
+
+<script>
+let imageBase64 = null;
+const pasteArea = document.getElementById("paste-area");
+
+pasteArea.addEventListener("click", () => pasteArea.focus());
+document.addEventListener("paste", handlePaste);
+pasteArea.addEventListener("paste", handlePaste);
+
+function handlePaste(e) {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith("image/")) {
+      loadFile(item.getAsFile());
+      break;
+    }
+  }
+}
+
+pasteArea.addEventListener("dragover", e => { e.preventDefault(); pasteArea.classList.add("active"); });
+pasteArea.addEventListener("dragleave", () => pasteArea.classList.remove("active"));
+pasteArea.addEventListener("drop", e => {
+  e.preventDefault();
+  pasteArea.classList.remove("active");
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith("image/")) loadFile(file);
+});
+
+function loadFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    imageBase64 = e.target.result.split(",")[1];
+    document.getElementById("preview-img").src = e.target.result;
+    document.getElementById("paste-placeholder").style.display = "none";
+    document.getElementById("paste-preview").style.display = "block";
+    pasteArea.classList.add("has-image");
+    document.getElementById("analyze-btn").style.display = "block";
+    document.getElementById("result-area").style.display = "none";
+    document.getElementById("error-area").style.display = "none";
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearImage(e) {
+  if (e) e.stopPropagation();
+  imageBase64 = null;
+  document.getElementById("preview-img").src = "";
+  document.getElementById("paste-placeholder").style.display = "block";
+  document.getElementById("paste-preview").style.display = "none";
+  pasteArea.classList.remove("has-image");
+  document.getElementById("analyze-btn").style.display = "none";
+  document.getElementById("result-area").style.display = "none";
+  document.getElementById("error-area").style.display = "none";
+}
+
+async function analyzeImage() {
+  if (!imageBase64) return;
+  document.getElementById("loading-area").style.display = "block";
+  document.getElementById("result-area").style.display = "none";
+  document.getElementById("error-area").style.display = "none";
+  document.getElementById("analyze-btn").disabled = true;
+
+  const prompt = `당신은 코인 선물 트레이딩 안전 필터입니다.
+OKX 선물 Info 탭 스크린샷을 분석해서 아래 기준으로 판정하고 반드시 순수 JSON만 반환하세요. 마크다운 없이.
+
+필터 기준:
+1. 시총(Market cap): $100M 이상
+2. 유통률(Circulation rate): 20% 이상
+3. 상장기간(TGE date 기준 현재까지): 6개월 이상
+4. 거래량(24h turnover USDT): 시총 이하
+5. FDV/시총: Max supply × 현재가 / Market cap (5배 미만 권장)
+6. 펀딩비(Funding rate 4h): ±0.05% 이내 중립
+
+JSON 형식:
+{
+  "ticker": "심볼",
+  "name": "코인 전체 이름",
+  "price": "현재가",
+  "change": "변동률",
+  "items": {
+    "marketcap": { "value": "표시값", "valueRaw": 숫자또는null, "pass": true/false/null },
+    "circulation": { "value": "표시값", "valueRaw": 숫자또는null, "pass": true/false/null },
+    "listing": { "value": "N개월", "valueRaw": 숫자또는null, "tgeDate": "날짜", "pass": true/false/null },
+    "volume": { "value": "표시값", "valueRaw": 숫자또는null, "pass": true/false/null },
+    "fdvRatio": { "value": "N.NN배", "valueRaw": 숫자또는null, "fdv": "FDV금액", "pass": true/false/null },
+    "funding": { "value": "N.NNNNN%", "valueRaw": 숫자또는null, "pass": true/false/null }
+  },
+  "oi": "OI값",
+  "failCount": 숫자,
+  "verdict": "GREEN 또는 YELLOW 또는 RED",
+  "reason": "판정 이유 한 줄 한국어"
+}`;
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1200,
+        messages: [{
+          role: "user",
+          content: [
+            { type: "image", source: { type: "base64", media_type: "image/png", data: imageBase64 } },
+            { type: "text", text: prompt }
+          ]
+        }]
+      })
+    });
+
+    const data = await res.json();
+    const raw = data.content?.map(c => c.text || "").join("") || "";
+    const clean = raw.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(clean);
+    document.getElementById("loading-area").style.display = "none";
+    document.getElementById("analyze-btn").disabled = false;
+    renderResult(parsed);
+  } catch(e) {
+    document.getElementById("loading-area").style.display = "none";
+    document.getElementById("analyze-btn").disabled = false;
+    const el = document.getElementById("error-area");
+    el.style.display = "block";
+    el.textContent = "⚠️ 분석 실패 — 스크린샷을 다시 붙여넣고 시도해주세요. (" + e.message + ")";
+  }
+}
+
+function renderResult(d) {
+  document.getElementById("result-area").style.display = "block";
+  const it = d.items || {};
+
+  document.getElementById("ticker-sym").textContent = d.ticker || "—";
+  document.getElementById("ticker-fullname").textContent = (d.name && d.name !== d.ticker) ? d.name : "";
+  document.getElementById("ticker-price").textContent = d.price ? `${d.price}  ${d.change||""}` : "";
+
+  const base = [
+    { label:"시총", std:"$100M 이상", val:it.marketcap?.value||"—", detail:it.marketcap?.value||"데이터없음", pass:it.marketcap?.pass??null },
+    { label:"유통률", std:"20% 이상", val:it.circulation?.value||"—", detail:it.circulation?.value||"데이터없음", pass:it.circulation?.pass??null },
+    { label:"상장기간", std:"6개월 이상", val:it.listing?.value||"—", detail:it.listing?.tgeDate?`${it.listing.value} (${it.listing.tgeDate})`:(it.listing?.value||"데이터없음"), pass:it.listing?.pass??null },
+    { label:"거래량(24h)", std:"시총 이하", val:it.volume?.value||"—", detail:it.volume?.value||"데이터없음", pass:it.volume?.pass??null }
+  ];
+
+  const fdvR = it.fdvRatio?.valueRaw;
+  const fundR = it.funding?.valueRaw;
+  const fdvLv = fdvR==null?null:fdvR<3?0:fdvR<5?1:2;
+  const fundLv = fundR==null?null:Math.abs(fundR)<0.05?0:fundR>=0.05?2:1;
+
+  const extra = [
+    { label:"FDV/시총", val:it.fdvRatio?.value||"—", lv:fdvLv, desc:fdvLv===0?"✅ 잠긴 물량 적음":fdvLv===1?"⚠️ 주의":fdvLv===2?"🔴 세력 물량 많음":"확인필요" },
+    { label:"펀딩비", val:it.funding?.value||"—", lv:fundLv, desc:fundLv===0?"✅ 중립":(fundR||0)>0?"🚨 롱과열 — 숏 금지":"⚠️ 숏 쏠림 주의" },
+    { label:"OI", val:d.oi||"—", lv:null, desc:"미결제약정" }
+  ];
+
+  const failCnt = typeof d.failCount==="number" ? d.failCount : base.filter(r=>r.pass===false).length;
+  const fundDanger = fundLv===2;
+  const fdvDanger = fdvLv===2;
+
+  const vb=document.getElementById("verdict-box");
+  const vt=document.getElementById("verdict-text");
+  const vs=document.getElementById("verdict-sub");
+  const vbg=document.getElementById("verdict-badges");
+
+  if(d.verdict==="RED"||failCnt>=2){
+    vb.style.background="var(--red-bg)";vb.style.borderColor="var(--red-border)";
+    vt.style.color="var(--red)";vt.textContent="🔴 매매 금지";
+    vs.style.color="var(--red)";vs.textContent=d.reason||`기본필터 ${failCnt}개 미충족 — 절대 진입하지 마세요`;
+  }else if(d.verdict==="YELLOW"||failCnt===1||fundDanger){
+    vb.style.background="var(--yellow-bg)";vb.style.borderColor="var(--yellow-border)";
+    vt.style.color="var(--yellow)";vt.textContent="🟡 주의";
+    vs.style.color="var(--yellow)";vs.textContent=d.reason||(fundDanger&&failCnt===0?"펀딩비 과열 — 숏 진입 위험":"기본필터 1개 미충족 — 신중하게 판단하세요");
+  }else{
+    vb.style.background="var(--green-bg)";vb.style.borderColor="var(--green-border)";
+    vt.style.color="var(--green)";vt.textContent="🟢 매매 가능";
+    vs.style.color="var(--green)";vs.textContent=d.reason||"기본필터 전항목 통과 — 기술적 분석 유효 구간";
+  }
+
+  vbg.innerHTML=[
+    ...base.filter(r=>r.pass===false).map(r=>`<span class="badge-fail">❌ ${r.label} 부적합</span>`),
+    ...(fundDanger?[`<span class="badge-warn">⚠️ 펀딩비 과열</span>`]:[]),
+    ...(fdvDanger?[`<span class="badge-fail">🔴 FDV ${it.fdvRatio?.value}</span>`]:[])
+  ].join("");
+
+  document.getElementById("cards-base").innerHTML=base.map(r=>{
+    const cls=r.pass===true?"pass":r.pass===false?"fail":"";
+    const icon=r.pass===true?"✅":r.pass===false?"❌":"❓";
+    return`<div class="card ${cls}">
+      <div class="card-label">${r.label}</div>
+      <div class="card-value">${icon} ${r.val}</div>
+      <div class="card-std">${r.std}</div>
+    </div>`;
+  }).join("");
+
+  document.getElementById("cards-extra").innerHTML=extra.map(r=>{
+    const cls=r.lv===0?"pass":r.lv===1?"warn":r.lv===2?"fail":"";
+    const icon=r.lv===0?"✅":r.lv===1?"⚠️":r.lv===2?"🔴":"📊";
+    return`<div class="card ${cls}">
+      <div class="card-label">${r.label}</div>
+      <div class="card-value">${icon} ${r.val}</div>
+      <div class="card-std">${r.desc}</div>
+    </div>`;
+  }).join("");
+
+  const allRows=[
+    ...base.map(r=>({...r,isBase:true})),
+    {label:"FDV/시총",std:"5배 미만 권장",detail:it.fdvRatio?.value||"—",pass:fdvLv===0?true:fdvLv===2?false:null,isBase:false},
+    {label:"펀딩비",std:"±0.05% 이내",detail:it.funding?.value||"—",pass:fundLv===0?true:fundLv===2?false:null,isBase:false},
+    {label:"FDV",std:"참고용",detail:it.fdvRatio?.fdv||"—",pass:null,isBase:false}
+  ];
+
+  document.getElementById("table-body").innerHTML=allRows.map((r,i)=>{
+    const icon=r.pass===true?"✅ 적합":r.pass===false?"❌ 부적합":"📊 참고";
+    const cls=r.pass===true?"pass-cell":r.pass===false?"fail-cell":"ref-cell";
+    return`<tr class="${i===4?"divider":""}">
+      <td><strong>${r.label}</strong></td>
+      <td style="color:var(--text2)">${r.std}</td>
+      <td>${r.detail}</td>
+      <td class="${cls}">${icon}</td>
+    </tr>`;
+  }).join("");
+
+  document.getElementById("table-footer").textContent=`AI 스크린샷 분석 | ${new Date().toLocaleString('ko-KR')}`;
+}
+</script>
+</body>
+</html>
